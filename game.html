@@ -1,0 +1,353 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><title>Game Lab · Python</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+*{box-sizing:border-box}html,body{margin:0;background:#09111e;height:100%;overflow:hidden;font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#e1ebe9}#canvas{position:absolute;inset:0;width:100%!important;height:100%!important;outline:none}#status{display:none}#transfer,#pyconsole,#terminal,#html{display:none}.overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;text-align:center;padding:25px;background:#07101b62;backdrop-filter:blur(1px)}.overlay[hidden]{display:none}.badge{font:10px monospace;letter-spacing:3px;color:#8cd5ac;border:1px solid #476758;padding:7px 10px;border-radius:3px}.overlay h1{font-size:clamp(27px,4.6vw,43px);font-weight:600;letter-spacing:-1.2px;line-height:1.15;margin:24px 0 15px}.overlay p{font-size:12px;line-height:1.8;color:#a6bac7;max-width:270px;margin:0 0 25px}.overlay button{font:600 12px sans-serif;padding:12px 27px;background:#9aedbe;color:#153925;border:1px solid #b5f5d0;border-radius:4px;cursor:pointer}.overlay button:focus-visible,.buttons button:focus-visible{outline:2px solid #d3ffe4;outline-offset:4px}.orbit{color:#9aedbe;font:44px monospace;line-height:1;margin-bottom:21px}.buttons{position:absolute;bottom:12px;right:14px;display:flex;gap:7px}.buttons button{border:1px solid #375062;border-radius:4px;color:#b4c8d6;background:#182a3be6;font:11px sans-serif;padding:7px 10px;cursor:pointer}.overlay small{font-size:10px;color:#6f8a9a;margin-top:15px}.hud{position:absolute;top:17px;left:18px;color:#a7c0cb;font:11px monospace;pointer-events:none;display:none}
+</style>
+<script src="./runtime/browserfs.min.js"></script>
+<script>
+window.config={ume_block:0,gui_divider:1,autorun:1,cdn:new URL('./runtime/',location.href).href};
+window.gameLabKeys='[]';window.gameLabMetrics='';
+const measureViewport=()=>{window.gameLabViewport=JSON.stringify({width:innerWidth,height:innerHeight});};measureViewport();addEventListener('resize',measureViewport);const keys=new Set();let commands=[];
+window.gameLabTakeCommands=()=>{const result=JSON.stringify(commands);commands=[];return result;};
+function enqueue(type){commands.push({type});if(type==='start'||type==='restart')document.querySelector('#canvas').focus();}
+window.addEventListener('message',event=>{
+ if(event.origin!==location.origin||event.source!==parent||event.data?.channel!=='game-lab')return;
+ const data=event.data;
+ if(['apply','start','restart','pause'].includes(data.type)){keys.clear();window.gameLabKeys='[]';commands.push(data);}
+});
+window.gameLabNotify=raw=>{
+ const data=JSON.parse(raw);
+ if(data.type==='ready')document.querySelector('#overlay').hidden=false;
+ if(data.type==='metrics'){
+  const m=data.metrics;const overlay=document.querySelector('#overlay');overlay.hidden=m.mode==='playing';
+  const titles={start:'Твой первый<br>космический полёт',paused:'Полёт на паузе',over:'Миссия завершена'};
+  document.querySelector('#title').innerHTML=titles[m.mode]||'';
+  document.querySelector('#subtitle').textContent=m.mode==='over'?`Твой счёт: ${m.score}. Измени настройки или попробуй ещё раз.`:m.mode==='paused'?'Переведи дух. Продолжай, когда будешь готов.':'Ты — пилот и разработчик. Настрой корабль и отправляйся исследовать космос.';
+  document.querySelector('#play').textContent=m.mode==='paused'?'Продолжить полёт →':m.mode==='over'?'Ещё один полёт →':'Начать полёт →';
+ }
+ parent.postMessage({channel:'game-lab',...data},location.origin);
+};
+window.addEventListener('keydown',event=>{
+ if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','KeyA','KeyD','KeyW','KeyS','Space','Escape','Enter','KeyR'].includes(event.code)){
+  // Tab and buttons keep normal keyboard behavior; gameplay keys belong to the canvas.
+  if(document.activeElement?.tagName==='BUTTON'&&['Space','Enter'].includes(event.code))return;
+  event.preventDefault();keys.add(event.code);window.gameLabKeys=JSON.stringify([...keys]);
+  if(!event.repeat&&event.code==='Escape')enqueue('toggle_pause');
+  if(!event.repeat&&event.code==='Enter')enqueue('start');
+  if(!event.repeat&&event.code==='KeyR')enqueue('restart');
+ }
+});
+window.addEventListener('keyup',event=>{keys.delete(event.code);window.gameLabKeys=JSON.stringify([...keys]);});
+function stop(){keys.clear();window.gameLabKeys='[]';enqueue('pause');}
+window.addEventListener('blur',stop);document.addEventListener('visibilitychange',()=>{if(document.hidden)stop();});
+window.addEventListener('error',event=>window.gameLabNotify(JSON.stringify({type:'error',message:event.message})));
+</script></head><body>
+<div id="status"></div><progress id="progress" hidden></progress><div id="transfer"></div>
+<canvas id="canvas" width="600" height="720" tabindex="0" aria-label="Игровое поле. WASD или стрелки — движение, пробел — огонь, Escape — пауза, R — перезапуск."></canvas><canvas id="canvas3d" hidden></canvas><div id="html"></div><div id="pyconsole"><div id="terminal"></div></div>
+<div class="overlay" id="overlay" hidden><span class="orbit">✧</span><span class="badge">SPACE EXPLORER / 01</span><h1 id="title">Твой первый<br>космический полёт</h1><p id="subtitle">Ты — пилот и разработчик. Настрой корабль и отправляйся исследовать космос.</p><button id="play" onclick="enqueue('start')">Начать полёт →</button><small>Enter — старт · Esc — пауза · R — новый полёт</small></div>
+<div class="buttons"><button onclick="enqueue('toggle_pause')" aria-label="Пауза или продолжение">Ⅱ Пауза</button><button onclick="enqueue('restart')" aria-label="Перезапустить полёт">↻</button></div>
+<script src="./runtime/pythons.js" type="module" id="site" data-python="python3.12" data-os="gui" async defer>#<!--
+"""Trusted Python/Pygame engine. Student text is never evaluated."""
+import asyncio
+import json
+import math
+import random
+import sys
+import time
+import pygame
+
+WIDTH, HEIGHT = 600, 720
+DEFAULTS = dict(ship_speed=220, left_direction=1, shooting_enabled=False, shot_delay=0.35,
+                asteroids_enabled=False, asteroid_speed=120, spawn_delay=1.3,
+                hit_enabled=False, points_per_hit=10, lives=3, ship_color='mint')
+BOUNDS = dict(ship_speed=(80, 600), shot_delay=(0.08, 1.5),
+              asteroid_speed=(40, 400), spawn_delay=(0.25, 3),
+              points_per_hit=(1, 100), lives=(1, 9))
+COLORS = dict(mint=(142, 244, 193), blue=(115, 187, 255),
+              coral=(255, 148, 125), gold=(248, 211, 123))
+
+
+def validate_config(value):
+    if not isinstance(value, dict) or set(value) != set(DEFAULTS):
+        raise ValueError('Неполные настройки игры.')
+    for key, default in DEFAULTS.items():
+        item = value[key]
+        if type(default) is bool:
+            if type(item) is not bool:
+                raise ValueError('Переключатель должен быть True или False.')
+        elif key == 'left_direction':
+            if type(item) is not int or item not in (-1, 1):
+                raise ValueError('Для направления нужен знак += или -=.')
+        elif key == 'ship_color':
+            if item not in COLORS:
+                raise ValueError('Неизвестный цвет корабля.')
+        else:
+            low, high = BOUNDS[key]
+            if type(item) not in (int, float) or not math.isfinite(item) or not low <= item <= high:
+                raise ValueError('Настройка вне допустимого диапазона.')
+            if key in ('lives', 'points_per_hit') and item != int(item):
+                raise ValueError('Жизни и очки должны быть целыми.')
+    return dict(value)
+
+
+class Game:
+    def __init__(self, config=None, seed=None):
+        self.config = validate_config(config or DEFAULTS)
+        self.rng = random.Random(seed)
+        self.revision = 0
+        self.reset('start')
+
+    def reset(self, mode='playing'):
+        self.mode = mode
+        self.x, self.y = WIDTH / 2, HEIGHT - 85
+        self.score, self.lives = 0, int(self.config['lives'])
+        self.bullets, self.enemies, self.particles = [], [], []
+        self.shot_timer, self.spawn_timer, self.invincible = 0., 0., 0.
+        self.distance, self.seconds = 0., 0.
+        self.shots, self.spawned, self.destroyed, self.damage = 0, 0, 0, 0
+
+    def resize_width(self, width):
+        global WIDTH
+        if width == WIDTH:
+            return
+        ratio = width / WIDTH
+        self.x = min(width-30, max(30, self.x*ratio))
+        for item in self.bullets + self.enemies + self.particles:
+            item[0] *= ratio
+        WIDTH = width
+
+    def apply(self, config, revision):
+        checked = validate_config(config)  # validate before any mutation
+        self.config = checked
+        self.revision = revision
+        self.reset('start')
+
+    def command(self, command):
+        if command == 'restart':
+            self.reset()
+        elif command == 'start':
+            if self.mode in ('start', 'over'):
+                self.reset()
+            elif self.mode == 'paused':
+                self.mode = 'playing'
+        elif command == 'pause' and self.mode == 'playing':
+            self.mode = 'paused'
+        elif command == 'toggle_pause':
+            self.mode = 'playing' if self.mode == 'paused' else ('paused' if self.mode == 'playing' else self.mode)
+
+    def burst(self, x, y, color, count=16):
+        for _ in range(count):
+            angle = self.rng.random() * math.tau
+            speed = self.rng.uniform(40, 150)
+            self.particles.append([x, y, math.cos(angle)*speed, math.sin(angle)*speed,
+                                   self.rng.uniform(0.2, 0.65), color])
+
+    def update(self, dt, keys):
+        dt = min(0.05, max(0, dt))
+        if self.mode != 'playing':
+            return
+        c = self.config
+        self.seconds += dt
+        self.invincible = max(0, self.invincible-dt)
+        dx = int('ArrowRight' in keys or 'KeyD' in keys)+c['left_direction']*int('ArrowLeft' in keys or 'KeyA' in keys)
+        dy = int('ArrowDown' in keys or 'KeyS' in keys)-int('ArrowUp' in keys or 'KeyW' in keys)
+        scale = math.sqrt(2) if dx and dy else 1
+        old_x, old_y = self.x, self.y
+        self.x = min(WIDTH-30, max(30, self.x+dx*c['ship_speed']*dt/scale))
+        self.y = min(HEIGHT-40, max(30, self.y+dy*c['ship_speed']*dt/scale))
+        self.distance += math.hypot(self.x-old_x, self.y-old_y)
+        self.shot_timer = max(0, self.shot_timer-dt)
+        if 'Space' in keys and c['shooting_enabled'] and self.shot_timer <= 0:
+            self.bullets.append([self.x, self.y-25])
+            self.shots += 1
+            self.shot_timer = c['shot_delay']
+        self.spawn_timer -= dt
+        if c['asteroids_enabled'] and self.spawn_timer <= 0:
+            # Every third asteroid follows the central lane; others fill the field.
+            x = WIDTH/2 if self.spawned % 3 == 0 else self.rng.uniform(35, WIDTH-35)
+            self.enemies.append([x, -30., self.rng.randint(18, 32), self.rng.random()*math.tau])
+            self.spawned += 1
+            self.spawn_timer = c['spawn_delay']
+        for bullet in self.bullets:
+            bullet[1] -= 560*dt
+        for enemy in self.enemies:
+            enemy[1] += c['asteroid_speed']*dt
+            enemy[3] += dt*0.35
+        for bullet in self.bullets[:]:
+            if not c['hit_enabled']:
+                break
+            bullet_rect = pygame.Rect(bullet[0]-4, bullet[1]-12, 8, 24)
+            for enemy in self.enemies[:]:
+                radius = enemy[2]
+                enemy_rect = pygame.Rect(enemy[0]-radius, enemy[1]-radius, radius*2, radius*2)
+                if enemy_rect.colliderect(bullet_rect):
+                    self.enemies.remove(enemy)
+                    self.bullets.remove(bullet)
+                    self.destroyed += 1
+                    self.score += c['points_per_hit']
+                    self.burst(enemy[0], enemy[1], (246, 193, 111))
+                    break
+        ship = pygame.Rect(self.x-16, self.y-20, 32, 40)
+        if self.invincible <= 0:
+            for enemy in self.enemies[:]:
+                radius = enemy[2]
+                if ship.colliderect(pygame.Rect(enemy[0]-radius, enemy[1]-radius, radius*2, radius*2)):
+                    self.enemies.remove(enemy)
+                    self.lives -= 1
+                    self.damage += 1
+                    self.invincible = 1.2
+                    self.burst(self.x, self.y, COLORS[c['ship_color']], 22)
+                    if self.lives <= 0:
+                        self.mode = 'over'
+                    break
+        self.bullets = [b for b in self.bullets if b[1] > -30]
+        self.enemies = [e for e in self.enemies if e[1] < HEIGHT+40]
+        for p in self.particles:
+            p[0] += p[2]*dt
+            p[1] += p[3]*dt
+            p[4] -= dt
+        self.particles = [p for p in self.particles if p[4] > 0]
+
+    def metrics(self, fps=0):
+        return dict(mode=self.mode, score=self.score, lives=self.lives, distance=self.distance,
+                    shots=self.shots, spawned=self.spawned, destroyed=self.destroyed,
+                    damage=self.damage, seconds=self.seconds, revision=self.revision, fps=fps)
+
+
+class Renderer:
+    def __init__(self, screen):
+        self.screen = screen
+        rng = random.Random(47)
+        self.stars = [(rng.randrange(WIDTH), rng.randrange(HEIGHT), rng.choice([1, 1, 1, 2]),
+                       rng.randrange(75, 180)) for _ in range(125)]
+        self.ship = pygame.Surface((70, 84), pygame.SRCALPHA)
+        self.background = pygame.Surface((WIDTH, HEIGHT))
+        self.background.fill((9, 17, 30))
+        # Locally generated planet asset, only Pygame drawing calls.
+        pygame.draw.circle(self.background, (15, 31, 45), (WIDTH-40, 135), 125)
+        pygame.draw.circle(self.background, (18, 37, 49), (WIDTH-48, 128), 116, 1)
+        pygame.draw.arc(self.background, (34, 58, 68), (WIDTH-181, 7, 266, 266), 1.7, 4.2, 2)
+        self.font = pygame.font.Font(None, 19)
+        self.small = pygame.font.Font(None, 15)
+
+    def draw(self, game, now):
+        s = self.screen
+        s.blit(self.background, (0, 0))
+        for x, y, radius, bright in self.stars:
+            sy = int((y+now*(10 if radius == 1 else 22)) % HEIGHT)
+            pygame.draw.circle(s, (bright//2, int(bright*.7), bright), (x, sy), radius)
+        # Borderless field grid and subtle launch lane.
+        for y in range(0, HEIGHT, 120):
+            pygame.draw.line(s, (15, 27, 40), (0, y), (WIDTH, y))
+        for bullet in game.bullets:
+            x, y = int(bullet[0]), int(bullet[1])
+            pygame.draw.line(s, (30, 68, 67), (x, y+20), (x, y-12), 7)
+            pygame.draw.line(s, (154, 255, 207), (x, y+4), (x, y-14), 3)
+            pygame.draw.circle(s, (226, 255, 243), (x, y-14), 2)
+        for enemy in game.enemies:
+            x, y, radius, angle = enemy
+            pts = [(int(x+math.cos(angle+i*math.tau/9)*radius*(.86 if i%2 else 1)),
+                    int(y+math.sin(angle+i*math.tau/9)*radius*(.86 if i%2 else 1))) for i in range(9)]
+            pygame.draw.polygon(s, (65, 58, 58), pts)
+            pygame.draw.polygon(s, (129, 111, 92), pts, 2)
+            pygame.draw.circle(s, (42, 42, 48), (int(x-radius*.22), int(y-radius*.18)), int(radius*.3))
+            pygame.draw.circle(s, (90, 77, 65), (int(x+radius*.3), int(y+radius*.23)), int(radius*.17), 1)
+        for p in game.particles:
+            pygame.draw.circle(s, p[5], (int(p[0]), int(p[1])), max(1, int(p[4]*6)))
+        if game.mode != 'over' and not (game.invincible > 0 and int(now*12)%2):
+            x, y = int(game.x), int(game.y)
+            color = COLORS[game.config['ship_color']]
+            flame = 12+int(4*math.sin(now*35))
+            pygame.draw.polygon(s, (39, 75, 91), [(x-8, y+21), (x, y+21+flame+9), (x+8, y+21)])
+            pygame.draw.polygon(s, (138, 210, 245), [(x-5, y+21), (x, y+21+flame), (x+5, y+21)])
+            pygame.draw.polygon(s, (207, 248, 242), [(x-2, y+21), (x, y+28), (x+2, y+21)])
+            pygame.draw.polygon(s, (41, 71, 82), [(x, y-29), (x-25, y+22), (x-9, y+16), (x+9, y+16), (x+25, y+22)])
+            pygame.draw.polygon(s, color, [(x, y-29), (x-25, y+22), (x-9, y+16), (x+9, y+16), (x+25, y+22)], 2)
+            pygame.draw.polygon(s, color, [(x, y-21), (x-9, y+16), (x+9, y+16)])
+            pygame.draw.polygon(s, (37, 77, 99), [(x, y-10), (x-4, y+5), (x+4, y+5)])
+            pygame.draw.line(s, (179, 228, 230), (x, y-19), (x, y-12), 2)
+        label = self.font.render(f'SCORE  {game.score:05d}', True, (161, 192, 207))
+        s.blit(label, (24, 23))
+        for i in range(game.lives):
+            pygame.draw.polygon(s, (139, 219, 178), [(WIDTH-26-i*18, 24), (WIDTH-31-i*18, 34), (WIDTH-21-i*18, 34)], 1)
+        s.blit(self.small.render('SECTOR 01  /  ORBITAL TRAINING', True, (76, 107, 129)), (24, HEIGHT-24))
+
+
+async def main():
+    import platform
+    pygame.init()
+    screen = pygame.display.set_mode((WIDTH, HEIGHT))
+    pygame.display.set_caption('Game Lab')
+    game = Game()
+    renderer = Renderer(screen)
+    browser = sys.platform == 'emscripten'
+    if browser:
+        platform.window.gameLabReady = True
+        platform.window.gameLabNotify(json.dumps({'type': 'ready'}))
+    previous = time.perf_counter()
+    last_report = previous
+    frames, elapsed, fps = 0, 0., 0.
+    while True:
+        now = time.perf_counter()
+        dt = min(0.05, now-previous)
+        previous = now
+        frames += 1
+        elapsed += dt
+        if elapsed >= 1:
+            fps = frames/elapsed
+            frames, elapsed = 0, 0.
+        keys = set()
+        for event in pygame.event.get():
+            if not browser:
+                if event.type == pygame.QUIT:
+                    return
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_RETURN:
+                        game.command('start')
+                    elif event.key == pygame.K_ESCAPE:
+                        game.command('toggle_pause')
+                    elif event.key == pygame.K_r:
+                        game.command('restart')
+        if browser:
+            viewport = json.loads(str(platform.window.gameLabViewport))
+            width = max(100, round(HEIGHT * viewport['width'] / max(1, viewport['height'])))
+            if width != WIDTH:
+                game.resize_width(width)
+                screen = pygame.display.set_mode((WIDTH, HEIGHT))
+                renderer = Renderer(screen)
+            keys = set(json.loads(str(platform.window.gameLabKeys)))
+            commands = json.loads(str(platform.window.gameLabTakeCommands()))
+            for command in commands:
+                try:
+                    if command['type'] == 'apply':
+                        game.apply(command['config'], command['revision'])
+                    else:
+                        game.command(command['type'])
+                except (ValueError, KeyError, TypeError) as exc:
+                    platform.window.gameLabNotify(json.dumps({'type': 'error', 'message': str(exc)}))
+        else:
+            pressed = pygame.key.get_pressed()
+            for key, code in [(pygame.K_LEFT, 'ArrowLeft'), (pygame.K_RIGHT, 'ArrowRight'),
+                              (pygame.K_UP, 'ArrowUp'), (pygame.K_DOWN, 'ArrowDown'),
+                              (pygame.K_a, 'KeyA'), (pygame.K_d, 'KeyD'),
+                              (pygame.K_w, 'KeyW'), (pygame.K_s, 'KeyS'), (pygame.K_SPACE, 'Space')]:
+                if pressed[key]:
+                    keys.add(code)
+        game.update(dt, keys)
+        renderer.draw(game, now)
+        pygame.display.flip()
+        if browser and now-last_report >= 0.15:
+            metrics = game.metrics(fps)
+            platform.window.gameLabMetrics = json.dumps(metrics)
+            platform.window.gameLabNotify(json.dumps({'type': 'metrics', 'metrics': metrics}))
+            last_report = now
+        await asyncio.sleep(0 if browser else 1/120)
+
+
+if __name__ == '__main__':
+    asyncio.run(main())
+
+# --></script>
+
+</body></html>

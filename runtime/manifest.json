@@ -1,0 +1,56 @@
+[
+  {
+    "path": "pythons.js",
+    "source": "https://pygame-web.github.io/archives/0.9/pythons.js",
+    "sha256": "e11be94dd16c29ccbb0387735df5888e0050766b2c58eae636911259e915765f",
+    "bytes": 73841
+  },
+  {
+    "path": "cpythonrc.py",
+    "source": "https://pygame-web.github.io/archives/0.9/cpythonrc.py",
+    "sha256": "e572192317d2688b4cd8a868815341c6ff2975b046da6f8668329be26381de39",
+    "bytes": 49368
+  },
+  {
+    "path": "browserfs.min.js",
+    "source": "https://pygame-web.github.io/archives/0.9/browserfs.min.js",
+    "sha256": "ba01fda78db31a7ba579afe74b8b56cf4636381ca1b6c54ffba20467756a627f",
+    "bytes": 251354
+  },
+  {
+    "path": "cpython312/main.js",
+    "source": "https://pygame-web.github.io/archives/0.9/cpython312/main.js",
+    "sha256": "b6663c0257a5b696f85bd5920a4ee7d1a579e80e62699ea31fbe0c872a0f64f9",
+    "bytes": 4951434
+  },
+  {
+    "path": "cpython312/main.wasm",
+    "source": "https://pygame-web.github.io/archives/0.9/cpython312/main.wasm",
+    "sha256": "0d1fc2968ab55cad57076adea9876f00dba0749c1d93eb14cea6122945933c06",
+    "bytes": 12716708
+  },
+  {
+    "path": "cpython312/main.data",
+    "source": "https://pygame-web.github.io/archives/0.9/cpython312/main.data",
+    "sha256": "3190c58638da69b7c90616428e9a655bdb45a5842483cc7adab2aa7696a26de2",
+    "bytes": 7577474
+  },
+  {
+    "path": "repo/index-090-cp312.json",
+    "source": "https://pygame-web.github.io/archives/repo/index-090-cp312.json",
+    "sha256": "50eac106ab55b8c1a380a687c3c88b0701018dcbf3cfe0c5a0d3f11e5e7acdeb",
+    "bytes": 8173
+  },
+  {
+    "path": "repo/repodata.json",
+    "source": "https://pygame-web.github.io/archives/repo/repodata.json",
+    "sha256": "b4feabe133e96726ef92dd275ce2967d31da17985c44b5b1815de6b0ec4200a2",
+    "bytes": 80448
+  },
+  {
+    "path": "repo/cp312/pygame_static-1.0-cp312-cp312-wasm32_bi_emscripten.whl",
+    "source": "https://pygame-web.github.io/archives/repo/cp312/pygame_static-1.0-cp312-cp312-wasm32_bi_emscripten.whl",
+    "sha256": "8e6e6e122dec42e35e4cfc3cd033e6bc87719a7e25fad75ad2fe125aea6dd51e",
+    "bytes": 2478965
+  }
+]
